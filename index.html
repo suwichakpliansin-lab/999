@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ครัวโรงเรียน | สั่งอาหารออนไลน์</title>
+<link rel="stylesheet" href="style.css">
+<!-- ไลบรารีสร้าง QR Code สำหรับหน้าชำระเงิน -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+
+<!-- ========================= หน้าเข้าสู่ระบบ ========================= -->
+<section id="loginScreen" class="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <span class="logo-icon">🍜</span>
+      <h1>จองอาหาร<span class="accent">โรงเรียนลาซาล</span></h1>
+      <p class="login-sub">สั่งอาหารง่าย ไม่ต้องต่อคิว</p>
+    </div>
+
+    <form id="loginForm" class="login-form">
+      <label for="studentId">เลขประจำตัวนักเรียน</label>
+      <input type="text" id="studentId" placeholder="เช่น 12345" maxlength="10" required>
+      <p id="loginError" class="login-error"></p>
+      <button type="submit" class="btn btn-primary btn-block">เข้าสู่ระบบ</button>
+    </form>
+
+  </div>
+</section>
+
+<!-- ========================= แอปหลัก (แสดงหลังล็อกอิน) ========================= -->
+<div id="app" class="app hidden">
+
+  <!-- แถบนำทางด้านบน -->
+  <header class="navbar">
+    <div class="nav-left">
+      <span class="logo-icon">🍜</span>
+      <span class="brand">จองอาหาร<span class="accent">โรงเรียนลาซาล</span></span>
+    </div>
+
+    <nav class="nav-center" id="navCenter">
+      <button class="nav-link active" data-view="home">หน้าแรก</button>
+      <button class="nav-link" data-view="history">ประวัติการสั่งซื้อ</button>
+      <button class="nav-link admin-only hidden" data-view="admin">จัดการระบบ</button>
+    </nav>
+
+    <div class="nav-right">
+      <button id="darkModeToggle" class="icon-btn" title="สลับโหมดมืด/สว่าง">🌙</button>
+      <button id="cartBtn" class="icon-btn cart-btn" title="ตะกร้าสินค้า">
+        🛒 <span id="cartCount" class="cart-count hidden">0</span>
+      </button>
+      <div class="user-chip">
+        <span id="userName">ผู้ใช้</span>
+        <button id="logoutBtn" class="logout-btn" title="ออกจากระบบ">ออก</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ========================= หน้าแรก ========================= -->
+  <main id="view-home" class="view">
+
+    <section class="banner">
+      <div class="banner-text">
+        <h2>หิวแล้วใช่ไหม?</h2>
+        <p>สั่งเมนูโปรด รับที่โรงอาหารได้ตรงเวลาที่เลือก</p>
+      </div>
+      <div class="banner-blob">🍱</div>
+    </section>
+
+    <section class="search-bar-wrap">
+      <div class="search-bar">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="searchInput" placeholder="ค้นหาเมนูอาหาร เช่น ผัดกะเพรา, ชานม...">
+      </div>
+    </section>
+
+    <section class="category-bar" id="categoryBar">
+      <!-- หมวดหมู่จะถูกเติมด้วย JavaScript -->
+    </section>
+
+    <section class="food-grid" id="foodGrid">
+      <!-- การ์ดเมนูอาหารจะถูกเติมด้วย JavaScript -->
+    </section>
+
+    <p id="noResult" class="no-result hidden">ไม่พบเมนูที่ค้นหา ลองคำอื่นดูนะ 🔎</p>
+  </main>
+
+  <!-- ========================= ประวัติการสั่งซื้อ ========================= -->
+  <main id="view-history" class="view hidden">
+    <h2 class="view-title">ประวัติการสั่งซื้อของฉัน</h2>
+    <div id="historyList" class="history-list"></div>
+    <p id="noHistory" class="no-result hidden">ยังไม่มีประวัติการสั่งซื้อ ลองสั่งเมนูแรกของคุณเลย!</p>
+  </main>
+
+  <!-- ========================= ระบบแอดมิน ========================= -->
+  <main id="view-admin" class="view hidden">
+    <h2 class="view-title">แผงควบคุมแอดมิน</h2>
+
+    <div class="admin-stats">
+      <div class="stat-card">
+        <span class="stat-label">ยอดขายรวม</span>
+        <span class="stat-value" id="statRevenue">฿0</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">จำนวนออเดอร์</span>
+        <span class="stat-value" id="statOrders">0</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">เมนูขายดี</span>
+        <span class="stat-value" id="statTopItem">-</span>
+      </div>
+    </div>
+
+    <div class="admin-tabs">
+      <button class="admin-tab-btn active" data-admintab="menu">จัดการเมนู</button>
+      <button class="admin-tab-btn" data-admintab="orders">จัดการออเดอร์</button>
+    </div>
+
+    <!-- แท็บจัดการเมนู -->
+    <div id="adminTab-menu" class="admin-tab-content">
+      <button id="addMenuBtn" class="btn btn-primary">+ เพิ่มเมนูใหม่</button>
+      <div class="admin-menu-table-wrap">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>รูป</th><th>ชื่อเมนู</th><th>หมวดหมู่</th><th>ราคา</th><th>สถานะ</th><th>จัดการ</th>
+            </tr>
+          </thead>
+          <tbody id="adminMenuTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- แท็บจัดการออเดอร์ -->
+    <div id="adminTab-orders" class="admin-tab-content hidden">
+      <div class="admin-menu-table-wrap">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>เลขออเดอร์</th><th>ผู้สั่ง</th><th>เวลารับ</th><th>ราคารวม</th><th>สถานะ</th><th>เปลี่ยนสถานะ</th>
+            </tr>
+          </thead>
+          <tbody id="adminOrderTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- ส่วนท้ายเว็บไซต์ -->
+  <footer class="footer">
+    <div class="footer-content">
+      <div class="footer-brand">
+        <span class="logo-icon">🍜</span>
+        <span class="brand">ครัว<span class="accent">โรงเรียน</span></span>
+      </div>
+      <p>สั่งอาหารง่าย รับตรงเวลา ไม่ต้องต่อคิว</p>
+      <p class="footer-copy">© 2026 ครัวโรงเรียน · ระบบสั่งอาหารออนไลน์สำหรับนักเรียน</p>
+    </div>
+  </footer>
+
+</div>
+
+<!-- ========================= Modal: รายละเอียดอาหาร ========================= -->
+<div id="foodModal" class="modal-overlay hidden">
+  <div class="modal modal-food">
+    <button class="modal-close" data-close="foodModal">✕</button>
+    <div class="modal-food-body">
+      <img id="foodModalImg" class="modal-food-img" src="" alt="">
+      <div class="modal-food-info">
+        <h2 id="foodModalName"></h2>
+        <p id="foodModalDesc" class="modal-food-desc"></p>
+        <p id="foodModalPrice" class="modal-food-price"></p>
+
+        <div class="qty-row">
+          <span>จำนวน</span>
+          <div class="qty-control">
+            <button id="qtyMinus" class="qty-btn">−</button>
+            <span id="qtyValue">1</span>
+            <button id="qtyPlus" class="qty-btn">+</button>
+          </div>
+        </div>
+
+        <label for="foodNote" class="note-label">หมายเหตุถึงร้าน (ถ้ามี)</label>
+        <textarea id="foodNote" placeholder="เช่น ไม่ใส่ผัก, เผ็ดน้อย..." rows="2"></textarea>
+
+        <button id="addToCartBtn" class="btn btn-primary btn-block">เพิ่มลงตะกร้า</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========================= Modal: ตะกร้าสินค้า ========================= -->
+<div id="cartModal" class="modal-overlay hidden">
+  <div class="modal modal-cart">
+    <button class="modal-close" data-close="cartModal">✕</button>
+    <h2>ตะกร้าของฉัน 🛒</h2>
+    <div id="cartItemsWrap" class="cart-items-wrap"></div>
+    <p id="cartEmptyMsg" class="no-result hidden">ตะกร้าว่างเปล่า ไปเลือกเมนูกันเถอะ!</p>
+
+    <div class="cart-total-row">
+      <span>ราคารวมทั้งหมด</span>
+      <span id="cartTotalPrice">฿0</span>
+    </div>
+    <button id="goToPickupBtn" class="btn btn-primary btn-block">ดำเนินการต่อ</button>
+  </div>
+</div>
+
+<!-- ========================= Modal: เลือกเวลารับอาหาร ========================= -->
+<div id="pickupModal" class="modal-overlay hidden">
+  <div class="modal modal-pickup">
+    <button class="modal-close" data-close="pickupModal">✕</button>
+    <h2>เลือกวันเวลารับอาหาร 🕒</h2>
+
+    <label for="pickupDate">วันที่รับอาหาร</label>
+    <input type="date" id="pickupDate">
+
+    <label for="pickupTime">เวลารับอาหาร</label>
+    <input type="time" id="pickupTime">
+
+    <p id="pickupError" class="login-error"></p>
+    <p id="estimateReadyMsg" class="estimate-msg hidden"></p>
+
+    <button id="confirmPickupBtn" class="btn btn-primary btn-block">ไปหน้าชำระเงิน</button>
+  </div>
+</div>
+
+<!-- ========================= Modal: ชำระเงินด้วย QR ========================= -->
+<div id="paymentModal" class="modal-overlay hidden">
+  <div class="modal modal-payment">
+    <button class="modal-close" data-close="paymentModal">✕</button>
+    <h2>ชำระเงินผ่าน QR Code 📱</h2>
+    <p class="pay-sub">สแกนเพื่อชำระเงิน หรือกดจำลองการชำระเงินด้านล่าง</p>
+
+    <div class="qr-wrap">
+      <div id="qrcodeBox"></div>
+    </div>
+
+    <div class="pay-info">
+      <div class="pay-row"><span>เลขคำสั่งซื้อ</span><span id="payOrderId">-</span></div>
+      <div class="pay-row"><span>จำนวนเงิน</span><span id="payAmount" class="pay-amount">฿0</span></div>
+      <div class="pay-row"><span>หมดเวลาใน</span><span id="payTimer" class="pay-timer">05:00</span></div>
+    </div>
+
+    <button id="simulatePayBtn" class="btn btn-primary btn-block">✅ จำลองการชำระเงินสำเร็จ</button>
+    <button id="cancelPayBtn" class="btn btn-outline btn-block">ยกเลิกคำสั่งซื้อ</button>
+  </div>
+</div>
+
+<!-- ========================= Modal: เพิ่ม/แก้ไขเมนู (แอดมิน) ========================= -->
+<div id="menuFormModal" class="modal-overlay hidden">
+  <div class="modal modal-menuform">
+    <button class="modal-close" data-close="menuFormModal">✕</button>
+    <h2 id="menuFormTitle">เพิ่มเมนูใหม่</h2>
+
+    <form id="menuForm">
+      <input type="hidden" id="menuFormId">
+
+      <label for="menuFormName">ชื่อเมนู</label>
+      <input type="text" id="menuFormName" required>
+
+      <label for="menuFormDesc">รายละเอียด</label>
+      <textarea id="menuFormDesc" rows="2" required></textarea>
+
+      <label for="menuFormCategory">หมวดหมู่</label>
+      <select id="menuFormCategory" required></select>
+
+      <label for="menuFormPrice">ราคา (บาท)</label>
+      <input type="number" id="menuFormPrice" min="1" step="1" required>
+
+      <label for="menuFormImg">ลิงก์รูปภาพ</label>
+      <input type="text" id="menuFormImg" placeholder="https://...">
+
+      <label class="checkbox-label">
+        <input type="checkbox" id="menuFormAvailable" checked>
+        พร้อมขาย
+      </label>
+
+      <button type="submit" class="btn btn-primary btn-block">บันทึกเมนู</button>
+    </form>
+  </div>
+</div>
+
+<!-- ========================= Toast แจ้งเตือน ========================= -->
+<div id="toast" class="toast hidden"></div>
+
+<script src="script.js"></script>
+<script src="https://js.stripe.com/v3/"></script>
+</body>
+</html>

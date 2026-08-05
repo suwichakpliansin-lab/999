@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>ชำระเงินสำเร็จ</title>
+</head>
+<body style="font-family:Arial;text-align:center;margin-top:100px;">
+
+<h1>✅ ชำระเงินสำเร็จ</h1>
+<p>กำลังกลับไปหน้าร้าน...</p>
+
+<script>
+localStorage.setItem("stripe_paid", "true");
+
+setTimeout(() => {
+    window.location.href = "/";
+}, 2000);
+</script>
+
+</body>
+</html>
